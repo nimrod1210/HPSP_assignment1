@@ -16,3 +16,4 @@ operation_b7
 core
 core.*
 **/build/
+!mission1/data/transmissions.txt
