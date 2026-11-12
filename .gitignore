@@ -2,11 +2,6 @@
 _support/
 operation_b7
 
-# Personalized evidence
-**/data/*
-!**/data/README.md
-!mission1/data/sample_input.txt
-
 # Compiled files
 *.o
 *.a
@@ -16,4 +11,3 @@ operation_b7
 core
 core.*
 **/build/
-!mission1/data/transmissions.txt
