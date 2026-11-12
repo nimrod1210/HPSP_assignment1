@@ -1,13 +1,6 @@
-# Provided course infrastructure
-_support/
-operation_b7
-
-# Compiled files
+# Compiler-generated object files
 *.o
-*.a
-*.so
-*.out
-*.exe
+
+# Crash dumps
 core
 core.*
-**/build/
