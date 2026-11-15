@@ -94,41 +94,95 @@ int apply_patch(Agent *agents, size_t count, const AgentPatch *patch)
 }
 
 int classify_access(const Agent *agents, size_t count, const AccessEvent *event){
-
     if (is_event_valid(event) == 0) {
         return ACCESS_INVALID; /* invalid input */
     }
-    if (agents==NULL && count == 0) {
-        return ACCESS_DENIED; /* no agents given */
+    if(agents == NULL) {
+        if(count==0){
+            if(event->granted == 1){
+                return ACCESS_UNAUTHORIZED_GRANTED; /* no agents given, but access granted */
+            }
+                return ACCESS_DENIED; /* no agents given, and access denied */
+        }
+        return ACCESS_INVALID; /* invalid input */
     }
-    Agent *agents_copy;
-    if(!copy_agents(agents_copy, count, agents, count)){
-        return ACCESS_INVALID; /* failed to copy agents */
+    const Agent *found = NULL;
+    if(count>0){
+        for (const Agent *p = agents; p < agents + count; ++p) {
+            if (p->id == event->agent_id) {
+                found = p;
+                break;
+            }
+        }
     }
-    Agent *agent = find_agent(agents_copy, count, event->agent_id);
-    if (agent== NULL) {
-        return ACCESS_INVALID; /* agent not found */
+    int authorized = (found != NULL && found->active == 1 && found->clearance >= event->required_clearance);
+    if (authorized && event->granted == 1) {
+        return ACCESS_OK; /* access granted and authorized */
     }
-    if (event->granted == 1 && event->required_clearance > agent->clearance) {
-        return ACCESS_UNAUTHORIZED_GRANTED; /* access granted but not authorized */
+    if (authorized && !event->granted) {
+        return ACCESS_UNEXPECTED_DENIAL; 
     }
-    if (event->granted == 0 && event->required_clearance <= agent->clearance) {
-        return ACCESS_UNEXPECTED_DENIAL; /* access denied but should have been granted */
+    if (!authorized && event->granted) {
+        return ACCESS_UNAUTHORIZED_GRANTED;
     }
-    if(event->granted == 0 && event->required_clearance > agent->clearance) {
-        return ACCESS_DENIED; /* access denied and not authorized */
+    return ACCESS_DENIED;
+}
+
+/* helper function to filter events for code recovery */
+static int filter_event(const Agent *agents, size_t agent_count, const AccessEvent *events){
+    if(events == NULL) {
+        return 0; /* invalid input */
     }
-    return ACCESS_OK;
+    if(events->agent_id != 67){ 
+        return 0;
+    }
+    if(events->sequence < 0 || events->sequence > 7){
+        return 0;
+    }
+    if(events->encoded_symbol < 0 || events->encoded_symbol > 25){  
+        return 0;
+    }
+    if (classify_access(agents, agent_count, events) != ACCESS_UNAUTHORIZED_GRANTED) {
+        return 0;
+    }
+    return 1;
 }
 
 int recover_code(const Agent *agents, size_t agent_count, const AccessEvent *events, size_t event_count, char *code, size_t capacity)
 {
-    (void)agents;
-    (void)agent_count;
-    (void)events;
-    (void)event_count;
-    if (code != NULL && capacity > 0)
+    if (code == NULL) {
+        return 0; /* invalid input */
+    }
+    if(capacity < 9){
+        if(capacity > 0){
+            code[0] = '\0'; /* not enough capacity for code, return empty string */
+        }
+        return 0; /* invalid input */
+    }
+    if ((agents == NULL && agent_count > 0) || (events == NULL && event_count > 0)) {
         code[0] = '\0';
-        
-    return 0; /* TODO: Stage D */
+        return 0;
+    }
+    int seen[8] = {0}; /* track seen sequences */
+    char letters[8] = {0}; /* store letters for each sequence */
+    for (size_t i = 0; i < event_count; i++) {
+        const AccessEvent *event = &events[i];
+        if (!filter_event(agents, agent_count, &events[i])) {
+            continue;
+        }
+        int s = event->sequence;
+        seen[s]++;
+        letters[s] = (char)('A' + ((event->encoded_symbol - s + 26) % 26)); /* decode the symbol to a character */;
+    }   
+    for(int i = 0; i < 8; i++) {
+        if (seen[i] != 1) {
+            code[0] = '\0'; /* invalid sequence, return empty string */
+            return 0;
+        }
+    }
+    for(int i = 0; i < 8; i++) {
+        code[i] = letters[i]; /* construct the code */
+    }
+    code[8] = '\0'; /* null-terminate the string */
+    return 1; /* successfully recovered code */
 }
