@@ -94,31 +94,38 @@ int apply_patch(Agent *agents, size_t count, const AgentPatch *patch)
 }
 
 int classify_access(const Agent *agents, size_t count, const AccessEvent *event){
-
     if (is_event_valid(event) == 0) {
         return ACCESS_INVALID; /* invalid input */
     }
-    if (agents==NULL && count == 0) {
-        return ACCESS_DENIED; /* no agents given */
+    if(agents == NULL) {
+        if(count==0){
+            if(event->granted == 1){
+                return ACCESS_UNAUTHORIZED_GRANTED; /* no agents given, but access granted */
+            }
+                return ACCESS_DENIED; /* no agents given, and access denied */
+        }
+        return ACCESS_INVALID; /* invalid input */
     }
-    Agent *agents_copy;
-    if(!copy_agents(agents_copy, count, agents, count)){
-        return ACCESS_INVALID; /* failed to copy agents */
+    const Agent *found = NULL;
+    if(count>0){
+        for (const Agent *p = agents; p < agents + count; ++p) {
+            if (p->id == event->agent_id) {
+                found = p;
+                break;
+            }
+        }
     }
-    Agent *agent = find_agent(agents_copy, count, event->agent_id);
-    if (agent== NULL) {
-        return ACCESS_INVALID; /* agent not found */
+    int authorized = (found != NULL && found->active == 1 && found->clearance >= event->required_clearance);
+    if (authorized && event->granted == 1) {
+        return ACCESS_OK; /* access granted and authorized */
     }
-    if (event->granted == 1 && event->required_clearance > agent->clearance) {
-        return ACCESS_UNAUTHORIZED_GRANTED; /* access granted but not authorized */
+    if (authorized && !event->granted) {
+        return ACCESS_UNEXPECTED_DENIAL; 
     }
-    if (event->granted == 0 && event->required_clearance <= agent->clearance) {
-        return ACCESS_UNEXPECTED_DENIAL; /* access denied but should have been granted */
+    if (!authorized && event->granted) {
+        return ACCESS_UNAUTHORIZED_GRANTED;
     }
-    if(event->granted == 0 && event->required_clearance > agent->clearance) {
-        return ACCESS_DENIED; /* access denied and not authorized */
-    }
-    return ACCESS_OK;
+    return ACCESS_DENIED;
 }
 
 int recover_code(const Agent *agents, size_t agent_count, const AccessEvent *events, size_t event_count, char *code, size_t capacity)
