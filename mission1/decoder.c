@@ -1,210 +1,145 @@
 #include "decoder.h"
-
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
-int decode_message(const char *encoded, int shift, char *decoded, size_t capacity)
+/* Helper function to print an error message and return 0. */
+static int reject(void)
 {
-    // Validation:
-    if (encoded == NULL || decoded == NULL)
-    {
+    puts("[INVALID]");
+    return 0;
+}
+
+/* Helper function to validate that a string contains only uppercase letters and underscores, and its length. */
+static int is_valid_text(const char *s, size_t max_len)
+{
+    if (s == NULL || strlen(s) > max_len || strlen(s) == 0) {
         return 0;
     }
-
-    if (shift < 0 || shift > 25)
-    {
-        return 0;
-    }
-
-    size_t length = strlen(encoded);
-
-    if (capacity <= length)
-    {
-        return 0;
-    }
-
-    for (size_t i = 0; i < length; i++)
-    {
-        char c = encoded[i];
-
-        if (!((c >= 'A' && c <= 'Z') || c == '_'))
-        {
+    for (size_t i = 0; s[i] != '\0'; i++) {
+        char c = s[i];
+        if (c != '_' && (c < 'A' || c > 'Z')) {
             return 0;
         }
     }
+    return 1;
+}
 
-    // Decode:
-    for (size_t i = 0; i < length; i++)
-    {
-        char c = encoded[length - 1 - i];
-        if (c >= 'A' && c <= 'Z')
-        {
-            c = 'A' + (c - 'A' - shift + 26) % 26;
-        }
-        decoded[i] = c;
+/* Helper function to parse a string as a number and validate its value. */
+static int parse_number(const char *s, int *out)
+{
+    if (s[0] == '\0') {
+        return 0;
     }
-    decoded[length] = '\0';
+    int value = 0;
+    for (size_t i = 0; s[i] != '\0'; i++) {
+        char c = s[i];
+        if (c < '0' || c > '9') {
+            return 0;   
+        }
+        value = value * 10 + (c - '0');
+        if (value > 1000) {
+            return 0;
+        }
+    }
+    *out = value;
+    return 1;
+}
+
+int decode_message(const char *encoded, int shift, char *decoded, size_t capacity)
+{
+    if (encoded == NULL || decoded == NULL) {
+        return 0;
+    }
+    if (shift < 0 || shift > 25) {
+        return 0;
+    }
+    size_t len = strlen(encoded);
+    if (len + 1 > capacity) {
+        return 0;
+    }
+    for (size_t i = 0; i < len; i++) {
+        decoded[i] = encoded[len-1-i];
+    }
+    decoded[len] = '\0';
+    for (size_t i = 0; i < len; i++) {
+        char c = decoded[i];
+        if (c =='_') {
+            continue;           
+        }
+        if (c < 'A' || c > 'Z') {
+            return 0;            
+        }
+        decoded[i] = ((c - 'A' - shift + 26) % 26) + 'A';
+    }
     return 1;
 }
 
 int calculate_checksum(const char *message)
 {
-    if (message == NULL)
-    {
+    if (message == NULL) {
         return -1;
     }
-    size_t length = strlen(message);
-    size_t sum = 0;
-    for (size_t i = 0; i < length; i++)
-    {
-        sum += message[i];
+    int checksum = 0;
+    for (size_t i = 0; message[i] != '\0'; i++) {
+        char c = message[i];
+        checksum += c;
     }
-    return sum % 97;
+    return checksum % 97;
 }
 
 int process_transmission(const char *line)
 {
-    if (line == NULL)
-    {
-        puts("[INVALID]");
-        return 0;
-    }
-    size_t length = strlen(line);
+    /* TODO: parse, validate, decode, verify, and print one record. */
 
-    // validate 3 seperatrs
-    int separators = 0;
-    for (size_t i = 0; i < length; i++)
-    {
-        if (line[i] == '|')
-        {
-            separators++;
+    /* Validate the input line. */
+    if (line == NULL || strlen(line) == 0 || strlen(line) > 200) {
+        return reject();
+    }
+    int counter = 0;
+    for (size_t i = 0; line[i] != '\0'; i++) {
+        if(line[i]=='|') {
+            counter++;
         }
     }
-    if (separators != 3)
-    {
-        puts("[INVALID]");
-        return 0;
+    if (counter != 3) {
+        return reject();
     }
-
-    char copy[length + 1];
+    /* Split the line into its components. */
+    char copy[201];
     strcpy(copy, line);
     char *sender = strtok(copy, "|");
-    char *key_str = strtok(NULL, "|");
-    char *checksum_str = strtok(NULL, "|");
-    char *encrypted = strtok(NULL, "|");
+    char *key = strtok(NULL, "|");
+    char *checksum = strtok(NULL, "|");
+    char *encrypted_message = strtok(NULL, "|");
 
-    // validates all fields are nto null
-    if (sender == NULL || key_str == NULL ||
-        checksum_str == NULL || encrypted == NULL)
-    {
-        puts("[INVALID]");
-        return 0;
+    /* Validate the components. */
+    if (sender == NULL || key == NULL || checksum == NULL || encrypted_message == NULL) {
+        return reject();
+    }
+    if(!is_valid_text(sender, 24) || !is_valid_text(encrypted_message, 160)) {
+        return reject();
+    }
+    int key_value;
+    if (!parse_number(key, &key_value) || key_value < 0 || key_value > 25) {
+        return reject();
+    }
+    if (strlen(checksum) != 2 || !isdigit(checksum[0]) || !isdigit(checksum[1])) {
+        return reject();
+    } 
+    int checksum_value;
+    if(!parse_number(checksum, &checksum_value) || checksum_value < 0 || checksum_value > 96) {
+        return reject();
     }
 
-    // validate sender
-    if (strlen(sender) < 1 || strlen(sender) > 24)
-    {
-        puts("[INVALID]");
-        return 0;
+    /* Decode the message. */
+    char decoded_message[161];
+    if (!decode_message(encrypted_message, key_value, decoded_message, sizeof(decoded_message))) {
+        return reject();
     }
-    for (size_t i = 0; sender[i] != '\0'; i++)
-    {
-        char c = sender[i];
-        if (!((c >= 'A' && c <= 'Z') || c == '_'))
-        {
-            puts("[INVALID]");
-            return 0;
-        }
+    if (calculate_checksum(decoded_message) != checksum_value) {
+        return reject();
     }
-
-    // validate key
-    int key = 0;
-    for (size_t i = 0; key_str[i] != '\0'; i++)
-    {
-        char c = key_str[i];
-        if (c < '0' || c > '9')
-        {
-            puts("[INVALID]");
-            return 0;
-        }
-        key = key * 10 + (c - '0');
-        if (key > 25)
-        {
-            puts("[INVALID]");
-            return 0;
-        }
-    }
-
-    // validate checksum
-    if (strlen(checksum_str) != 2)
-    {
-        puts("[INVALID]");
-        return 0;
-    }
-
-    for (size_t i = 0; i < 2; i++)
-    {
-        if (checksum_str[i] < '0' || checksum_str[i] > '9')
-        {
-            puts("[INVALID]");
-            return 0;
-        }
-    }
-
-    int expected_checksum =(checksum_str[0] - '0') * 10 +(checksum_str[1] - '0');
-
-    if (expected_checksum > 96)
-    {
-        puts("[INVALID]");
-        return 0;
-    }
-
-    size_t message_length = strlen(encrypted);
-
-    if (message_length < 1 || message_length > 160)
-    {
-        puts("[INVALID]");
-        return 0;
-    }
-
-    for (size_t i = 0; i < message_length; i++)
-    {
-        char c = encrypted[i];
-
-        if (!((c >= 'A' && c <= 'Z') || c == '_'))
-        {
-            puts("[INVALID]");
-            return 0;
-        }
-    }
-
-    // decode the message
-    char decoded[161];
-    if (decode_message(encrypted, key, decoded, sizeof(decoded)) == 0)
-    {
-        puts("[INVALID]");
-        return 0;
-    }
-
-    //verify checksum is correct
-    if (calculate_checksum(decoded) != expected_checksum)
-    {
-        puts("[INVALID]");
-        return 0;
-    }
-
-    // everythign correct print
-    printf("[%s] %s\n", sender, decoded);
+    printf("[%s] %s\n", sender, decoded_message);
     return 1;
-}
-
-int decode_advanced(const char *encoded, const int *keys, size_t key_count, char *decoded, size_t capacity)
-{
-    /* Optional TODO. */
-    (void)encoded;
-    (void)keys;
-    (void)key_count;
-    (void)decoded;
-    (void)capacity;
-    return 0;
 }
