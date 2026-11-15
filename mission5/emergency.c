@@ -1,6 +1,32 @@
 #include "emergency.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+static int emergency_request_is_empty(const EmergencyRequest *dest)
+{
+    if (dest == NULL || dest->device != NULL || dest->steps != NULL ||
+        dest->request_id != 0 || dest->unit_id != 0 || dest->step_count != 0 ||
+        dest->authorization.request_id != 0 || dest->authorization.unit_id != 0 || dest->authorization.approver_id != 0 ||
+        dest->authorization.clearance != 0 || dest->authorization.approved != 0)
+    {
+        return 0;
+    }
+
+    for (size_t i = 0; i < M5_MODE_CAPACITY; i++)
+    {
+        if (dest->mode[i] != '\0')
+            return 0;
+    }
+
+    for (size_t i = 0; i < M5_ACTION_CAPACITY; i++)
+    {
+        if (dest->action[i] != '\0')
+            return 0;
+    }
+
+    return 1;
+}
 
 int parse_launch_options(int argc, char *const argv[], LaunchOptions *out)
 {
@@ -91,20 +117,67 @@ int emergency_request_init(EmergencyRequest *dest,
                            const AuthorizationRecord *authorization,
                            const int *steps, size_t step_count)
 {
-    if (dest == NULL || options == NULL || authorization == NULL || steps == NULL || step_count <1 || step_count> 8)
+    if (dest == NULL || options == NULL ||
+        authorization == NULL || steps == NULL ||
+        step_count == 0 || step_count > 8)
     {
         return 0;
     }
-    if(dest-> request_id=!0 || dest->unit_id!=||dest->device!=NULL || dest->steps !=NULL ){
+    if (!emergency_request_is_empty(dest))
+    {
         return 0;
     }
+
+    if (options->device[0] == '\0' ||
+        memchr(options->device, '\0', M5_DEVICE_CAPACITY) == NULL ||
+        memchr(options->mode, '\0', M5_MODE_CAPACITY) == NULL ||
+        memchr(options->action, '\0', M5_ACTION_CAPACITY) == NULL)
+    {
+        return 0;
+    }
+
+    size_t device_length = strlen(options->device);
+    char *device_copy = malloc(device_length + 1);
+    if (device_copy == NULL)
+    {
+        return 0;
+    }
+    strcpy(device_copy, options->device);
+
+    int *steps_copy = malloc(step_count * sizeof(int));
+    if (steps_copy == NULL)
+    {
+        free(device_copy);
+        return 0;
+    }
+    memcpy(steps_copy, steps, step_count * sizeof(int));
+
+    dest->request_id = authorization->request_id;
+    dest->unit_id = authorization->unit_id;
+    dest->authorization = *authorization;
+
+    strcpy(dest->mode, options->mode);
+    strcpy(dest->action, options->action);
+
+    dest->device = device_copy;
+    dest->steps = steps_copy;
+    dest->step_count = step_count;
+
+    return 1;
 }
+
 
 void emergency_request_free(EmergencyRequest *request)
 {
-    (void)request;
-    /* TODO Stage C: release owned allocations and reset every field. */
+    if (request == NULL)
+    {
+        return;
+    }
+    free(request->device);
+    free(request->steps);
+    *request = (EmergencyRequest){0};
 }
+
 
 int validate_emergency_request(const EmergencyRequest *request)
 {

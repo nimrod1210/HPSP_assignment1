@@ -145,4 +145,6 @@ The problematic condition was length > capacity. When the string length equals t
 
 **תשובת הצוות:**
 
-<!-- כתבו כאן. -->
+1) a pending request has approved = 0, while an approved request has approved = 1. We cant just change it manually because the approval needs to come from the authorization service. 
+2) we need independent copies of device and steps, since the original data might be changed or freed. Otherwise, our request could end up pointing to invalid memory. We also copy the authorization struct by value and the other strings into the requests arrays.
+
