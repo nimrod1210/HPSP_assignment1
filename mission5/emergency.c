@@ -2,6 +2,21 @@
 #include <stdio.h>
 #include <string.h>
 
+/* helper function that checks if a record is valid */
+static int is_valid_record(const AuthorizationRecord *record)
+{
+    if(record->request_id <= 0 || record->unit_id <= 0 || record->approver_id <= 0){
+        return 0;
+    }
+    if(record->approved != 1 && record->approved != 0){
+        return 0;
+    }
+    if(record->clearance < 0 || record->clearance > 5){
+        return 0;
+    }
+    return 1;
+}
+
 int parse_launch_options(int argc, char *const argv[], LaunchOptions *out)
 {
     if (out == NULL)
@@ -77,12 +92,17 @@ int parse_launch_options(int argc, char *const argv[], LaunchOptions *out)
 const AuthorizationRecord *find_authorization(const AuthorizationRecord *records, size_t count,
                                               int request_id, int unit_id, int required_clearance)
 {
-    (void)records;
-    (void)count;
-    (void)request_id;
-    (void)unit_id;
-    (void)required_clearance;
-    /* TODO Stage B: return the first usable record in the original array. */
+    if ((records == NULL && count != 0) || request_id <= 0 || unit_id <= 0 || required_clearance < 0 || required_clearance > 5) {
+        return NULL;
+    }
+    for(const AuthorizationRecord *record = records; record < records + count; ++record) {
+        if (!is_valid_record(record)) {
+            continue;
+        }
+        if(record->request_id == request_id && record->unit_id == unit_id && record->clearance >= required_clearance && !record->approved) {
+            return record;
+        }
+    }
     return NULL;
 }
 
@@ -95,7 +115,7 @@ int emergency_request_init(EmergencyRequest *dest,
     {
         return 0;
     }
-    if(dest-> request_id=!0 || dest->unit_id!=||dest->device!=NULL || dest->steps !=NULL ){
+    if(dest-> request_id=!0 || dest->unit_id!=0||dest->device!=NULL || dest->steps !=NULL ){
         return 0;
     }
 }
