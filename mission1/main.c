@@ -1,14 +1,32 @@
 #include "decoder.h"
 
 #include <stdio.h>
+#include <string.h>
 
 int main(void)
 {
-    /*
-     * TODO: read lines with fgets until EOF, remove \n and optional \r,
-     * call process_transmission, count both outcomes, and print the summary.
-     */
-    puts("Recovered: 0 | Rejected: 0");
+    char line[203];
+    int recovered = 0;
+    int rejected = 0;
+
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        size_t length = strlen(line);
+        while (length > 0 && (line[length - 1] == '\n' || line[length - 1] == '\r'))
+        {
+            length--;
+            line[length] = '\0';
+        }
+        if (process_transmission(line) == 1)
+        {
+            recovered++;
+        }
+        else
+        {
+            rejected++;
+        }
+    }
+    printf("Recovered: %d | Rejected: %d\n", recovered, rejected);
     return 0;
 }
 
