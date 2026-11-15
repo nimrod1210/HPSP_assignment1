@@ -1,6 +1,0 @@
-# Compiler-generated object files
-*.o
-
-# Crash dumps
-core
-core.*
