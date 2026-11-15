@@ -3,8 +3,8 @@
 **אל:** שירות הביטחון הכללי (שב״כ) ועיריית באר שבע  
 **סטודנט/ית 1 — שם מלא:** Shira Finzi  
 **מספר זהות:** 325047728  
-**סטודנט/ית 2 — שם מלא (אם יש):** ____________________  
-**מספר זהות (אם יש):** ____________________  
+**סטודנט/ית 2 — שם מלא (אם יש):** _Nimrod Jakobi______  
+**מספר זהות (אם יש):** __207298522____  
 **תאריך:** ____________________
 
 > זהו דוח פרטי המוגש לצוות הקורס. מספרי הזהות משמשים לאימות קודי הגישה האישיים, ומותר לכלול אותם רק בדוח זה — לא בקוד המקור, בקובצי הראיות או בפלט התוכניות.
@@ -20,16 +20,18 @@
 מה גיליתם בתשדורות, ומהו הממצא החשוב ביותר להמשך החקירה? ציינו את קוד הגישה בפורמט `B7-M1-XXXXXXXX`.
 
 **תשובת הצוות:**
-
-we found out from the transmission that operation Beershevanator is starting and that the agent count and the report disagree, and that it was instrcted to hide agen 67. 
-Acess code is: B7-M1-IIVMFCLF
+מצאנו מהתשדורות שהמבצע "operation Beershevanator" התחיל, והממצא החשוב הוא שיש אי התאמה בין ספירת הסוכנים לדוח, ויש סוכן "Agent 67" שמסתירים אותו במכוון.
+קוד הגישה הוא `B7-M1-IIVMFCLF` 
 
 ### הבנה טכנית
 
 הביאו **דוגמה אחת** לרשומה פגומה (אמיתית מהראיות או דוגמה שיצרתם), והסבירו מה גורם ל־`process_transmission` לדחות אותה. אין צורך לתאר את אלגוריתם הפענוח כולו.
 
 **תשובת הצוות:**
-an invalid transmission is TEST|3|48|F_ROOHK (from the samle_input) The message decodes to HELLO_C, which has a calculated checksum of 49. Since the recorded checksum is 48, process_transmission() rejects the transmission, prints [INVALID], and returns 0.
+רשומה פגומה מהראיות היא  - CONTROL|20|03|KUWA_IQN_NLUJ_YXIW_MMYWWU
+מבנה תקין - שלושה '|'
+נכשל על בדיקת checksum - בחישוב checksum עבור הרשומה יוצא 2 בעוד שברשומה רשום 3
+
 ---
 
 ## משימה 2 — הסוכן שלא קיים
