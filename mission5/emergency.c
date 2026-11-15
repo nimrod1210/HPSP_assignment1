@@ -17,6 +17,28 @@ static int is_valid_record(const AuthorizationRecord *record)
     return 1;
 }
 
+static int is_valid_auth(const EmergencyRequest *request)
+{
+    if(request->authorization.request_id <= 0 || request->authorization.unit_id <= 0 || request->authorization.approver_id <= 0){
+        return 0;
+    }
+    if(request->authorization.request_id != request->request_id){
+        return 0;
+    }
+    if(request->authorization.unit_id != request->unit_id){
+        return 0;
+    }
+    return 1;
+}
+
+static int is_auth_approved(const EmergencyRequest *request){
+    if((request->authorization.approved != 1) || (request->authorization.clearance < M5_ADMIN_CLEARANCE) || (request->authorization.clearance > 5)){
+        return 0;
+    }
+    return 1;
+}
+
+
 int parse_launch_options(int argc, char *const argv[], LaunchOptions *out)
 {
     if (out == NULL)
@@ -128,7 +150,24 @@ void emergency_request_free(EmergencyRequest *request)
 
 int validate_emergency_request(const EmergencyRequest *request)
 {
-    (void)request;
-    /* TODO Stage D: validate the complete request without changing it. */
-    return 0;
+    if(request==NULL){
+        return 0;
+    }
+    if(request->device==NULL || strcmp(request->device, "BEERSHEVANATOR") != 0){
+        return 0;
+    }
+    if((strcmp(request->mode, "emergency") != 0) || (strcmp(request->action, "self-destruct") != 0)){
+        return 0;
+    }
+    if(!is_valid_auth(request) || !is_auth_approved(request)){
+        return 0;
+    }
+    if(request->steps == NULL || request->step_count != 3){
+        return 0;
+    }
+    if(request->steps[0] != STEP_PREPARE_EMERGENCY || request->steps[1] != STEP_REQUEST_AUTHORIZATION || request->steps[2] != STEP_EXECUTE_COMMAND){
+        return 0;
+    }
+    return 1;
 }
+
