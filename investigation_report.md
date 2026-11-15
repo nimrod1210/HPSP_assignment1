@@ -41,8 +41,10 @@
 אילו אירועי גישה חריגים גיליתם, ומה אפשר להסיק מהם על סוכן 67? ציינו את קוד הגישה בפורמט `B7-M2-XXXXXXXX`.
 
 **תשובת הצוות:**
-
-<!-- כתבו כאן. -->
+היו אירועים שנדחו (גרטה, מיס נורה בידי)
+והיו 8 אירועים שבהם סוכן 67 קיבל גישה ללא הרשאה
+בהתאם הממצאים של משימה 1 ניתן להניח שסוכן 67 אינו קיים במאגר הסוכנים.
+קוד הגישה הוא `B7-M2-AUIZLIZT`
 
 ### הבנה טכנית
 
@@ -51,7 +53,10 @@
 
 **תשובת הצוות:**
 
-<!-- כתבו כאן. -->
+1. הפונקציה מחזירה מצביע לאיבר המקורי במערך ולא כתובת של משתנה מקומי כי ברגע שהפונקציה מסתיימת- משתנים לוקאליים שהיו על ה`stack`נמחקים, החזרת מצביע למשתנה מקומי היה גורם ל `dangling pointer`
+
+2. בmain.c working הוא מערך ולכן ניתן להשיג באמצעות sizeof את גודל המערך.
+לעומת זאת כשמכניסים לפונקציה`copy_agent` הפונקציה מקבלת מצביע וללא ארגומנט נוסף המעיד על גודל המערך - `capacity` לא היה דרך לפונקציה לדעת את גודלו.
 
 ---
 
@@ -64,7 +69,7 @@
 **תשובת הצוות:**
 
 from the recovered communications we found that the Beershevanator is planned to disrupt traffic control, access systems, and city infrastructure, and itll activate at midnight. Also theres a self destruct button we can activate from the server. also morty and agent 67 have a private comm channel that others dont know about. 
-code is B7-M3-OAYTIOFD
+code is `B7-M3-OAYTIOFD`
 
 ### הבנה טכנית
 
@@ -91,7 +96,7 @@ code is B7-M3-OAYTIOFD
 2. REQUEST_AUTHORIZATION
 3. EXECUTE_COMMAND
 
-Access code: B7-M4-OOESLCNY
+Access code: `B7-M4-OOESLCNY`
  
 ### תיעוד התיקונים
 
